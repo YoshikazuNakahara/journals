@@ -81,7 +81,7 @@ open Classical
 -- 排中律の使用例: ピアースの律
 example (P Q : Prop) : ((P → Q) → P) → P :=
   fun h ↦ 
-    (em P).elim
+    (Classical.em P).elim
       (fun hp ↦ hp) -- P が真ならそれを出して終了
       (fun hnp ↦ h (fun hp ↦ (hnp hp).elim)) -- P が偽なら矛盾から Q を作る
 

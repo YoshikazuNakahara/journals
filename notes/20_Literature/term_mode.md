@@ -3,7 +3,7 @@
 | 論理記号 | 導入則 (データを作る) | 除去則 (データを使う) |
 | --- | --- | --- |
 | **ならば ()** | `fun h ↦ ...` | `f h` (関数に引数を渡す) |
-| **かつ ()** | `⟨h1, h2⟩` | `h.left`, `h.right` |
+| **かつ ()** | `⟨h1, h2⟩` | `h.left`, `h.right`, `h.1`, `h.2` |
 | **または ()** | `.inl h`, `.inr h` | `h.elim (fun h1 ↦ ...) (fun h2 ↦ ...)` |
 | **同値 ()** | `⟨h_mp, h_mpr⟩` | `h.mp`, `h.mpr` |
 | **否定 ()** | `fun h ↦ ...` | `h h_val` (矛盾 `False` を導く) |
@@ -40,6 +40,9 @@ example (f : A → B) (ha : A) : B := f ha
 -- 導入
 example (ha : A) (hb : B) : A ∧ B := ⟨ha, hb⟩
 
+-- Mathlib流
+example (h : A ∧ B) : B ∧ A := ⟨h.2, h.1⟩
+
 -- 除去
 example (h : A ∧ B) : A := h.left
 
@@ -63,6 +66,13 @@ example (h : A ∨ B) : C :=
   h.elim 
     (fun ha ↦ _) -- 左側の場合のレシピ
     (fun hb ↦ _) -- 右側の場合のレシピ
+
+-- パターンマッチ（match文）を使うスタイル
+-- (複雑な場合分けではこちらの方が Mathlib では一般的)
+example (h : A ∨ B) : C := 
+  match h with
+  | .inl ha => _
+  | .inr hb => _
 
 ```
 

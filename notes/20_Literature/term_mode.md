@@ -78,14 +78,16 @@ example (h : A ∨ B) : C :=
 ```lean
 open Classical
 
--- 排中律の使用例: em A と書けば、即座に「A か ¬A か」の分岐に使える
-example (A : Prop) : A ∨ ¬A := em A
+-- 排中律の使用例: ピアースの律
+example (P Q : Prop) : ((P → Q) → P) → P :=
+  fun h ↦ 
+    (em P).elim
+      (fun hp ↦ hp) -- P が真ならそれを出して終了
+      (fun hnp ↦ h (fun hp ↦ (hnp hp).elim)) -- P が偽なら矛盾から Q を作る
 
--- 背理法の使用例: by_contra の後に「矛盾を導く関数」を置く
+-- 背理法の使用例:
 example (A : Prop) : A := 
-  by_contra (fun hna : ¬A ↦ 
-    -- ここで False を導く項を書く
-    _ )
+  by_contra (fun hna : ¬A ↦ _ ) -- この穴で False を作れば A が手に入る
 
 ```
 

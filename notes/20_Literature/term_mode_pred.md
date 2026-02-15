@@ -40,7 +40,7 @@ example (a : U) (ha : P a) : ∃ x, P x := ⟨a, ha⟩
 
 -- 除去
 example (h : ∃ x, P x) : Q := 
-  h.elim (fun x (hx : P x) ↦ 
+  h.elim (fun x hx ↦ 
     _ -- ここで x と hx を使って Q を作る
   )
 

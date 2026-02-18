@@ -225,3 +225,25 @@ Mathlib スタイルで証明を書く際、これらのタクティクを以下
 | **`gcongr`** | 構造分解 | 不等式の両辺の共通項を無視して中身を比べる |
 | **`norm_num`** | 定数計算 | `2 + 3 = 5` などの具体的な計算を証明する |
 | **`congr!`** | 関数分解 | `f x = f y` を `x = y` に落とし込む |
+
+import Mathlib.Tactic
+
+section
+open Classical
+
+variable (A : Type)
+variable (f : A → A)
+variable (P : A → Prop)
+variable (T : A -> A  → Prop)
+variable (h : ∀ x, P x → P (f x))
+
+example : ∀ y, P y → P (f (f y)) := by
+  rintro x h1
+  let h2: P (f x) := by exact h x h1
+  exact h (f x) h2
+
+example : ∀ y, P y → P (f (f y))
+| x => h (f x) ∘ h x
+end
+
+

@@ -226,6 +226,7 @@ Mathlib スタイルで証明を書く際、これらのタクティクを以下
 | **`norm_num`** | 定数計算 | `2 + 3 = 5` などの具体的な計算を証明する |
 | **`congr!`** | 関数分解 | `f x = f y` を `x = y` に落とし込む |
 
+```lean
 import Mathlib.Tactic
 
 section
@@ -245,6 +246,7 @@ example : ∀ y, P y → P (f (f y)) := by
 example : ∀ y, P y → P (f (f y))
 | x => h (f x) ∘ h x
 end
+```
 
 ---
 
@@ -304,3 +306,59 @@ fun h_ex ↦
 ```
 
 ---
+
+```lean
+import Mathlib.Tactic
+
+-- 命題を反証する：ある特定の A, P, Q のもとで、この含意は成り立たない
+example : ¬ (∀ {A : Type} {P Q : A → Prop}, (∀ y, ∃ x, P x → Q y) → ((∃ x, P x) → ∀ y, Q y)) := by
+  -- 1. 「もしこの命題が常に真（h_all）なら矛盾する」ことを示す
+  intro h_all
+  
+  -- 2. 具体的な反例のモデルを定義する
+  let A := Bool
+  let p (b : Bool) : Prop := (b = true)  -- trueはP、falseはPでない
+  let q (_ : Bool) : Prop := False       -- 誰もQではない
+  
+  -- 3. この反例モデルを h_all に適用して、具体的な含意を取り出す
+  -- h_spec : (∀ y, ∃ x, p x → q y) → ((∃ x, p x) → ∀ y, q y)
+  let h_spec := h_all (A := A) (P := p) (Q := q)
+  
+  -- 4. 前提 (∀ y, ∃ x, p x → q y) がこのモデルで「真」であることを示す
+  have h_premise : ∀ y : Bool, ∃ x : Bool, p x → q y := by
+    intro y
+    -- x として false を選べば、p false は「偽」なので、ならばは常に「真」
+    use false
+    intro (hp_false : false = true)
+    -- false = true という矛盾した仮定からは何でも導ける
+    nomatch hp_false
+    
+  -- 5. 結論の「ならば」の左側 (∃ x, p x) が「真」であることを示す
+  have h_exists_p : ∃ x : Bool, p x := by
+    use true
+    rfl -- true = true は定義より自明
+    
+  -- 6. h_spec にこれらを流し込むと、「∀ y, q y」が導かれてしまう
+  let h_forall_q : ∀ y : Bool, q y := h_spec h_premise h_exists_p
+  
+  -- 7. しかし q false は False と定義したので、ここで矛盾が発生！
+  -- h_forall_q false : False
+  exact h_forall_q false
+
+```
+
+---
+
+### この証明のポイント（学びのポイント）
+
+1. **`let A := Bool`**:
+抽象的な型 `A` に、具体的な「2つの要素を持つ型」を代入しています。反例を作る際、`Bool`（`true` と `false`）は非常に便利です。
+2. **`p x := (x = true)`**:
+「一部の人は  だが、一部の人は  ではない」という状況を `x = true` という定義で作りました。
+3. **`use false` (Step 4)**:
+ここが最大の急所です。前提の `∃ x, P x → Q y` において、**「 ではない人（）」を一人連れてくるだけで、前提全体を真にできてしまう**（ が何であろうと関係なくなる）ことを突いています。
+4. **`nomatch` / `rfl**`:
+Lean特有のタクティクです。`nomatch` は「起こり得ない状況（`false = true`）」を却下し、`rfl` は「同じものの等号」を確認します。
+
+---
+

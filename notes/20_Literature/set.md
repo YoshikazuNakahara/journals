@@ -68,4 +68,43 @@ fun x hS ↦
 let hA : x ∈ A := hSA hS
 let hB : x ∈ B := hSB hS
 ⟨ hA, hB ⟩
+
+example : A ∪ (B ∩ C) = (A ∪ B) ∩  (A ∪ C) :=
+Subset.antisymm
+  (fun _ habc ↦ 
+    ⟨ 
+      habc.elim
+        (fun ha ↦ .inl ha)
+        (fun hbc ↦ .inr hbc.1),
+      habc.elim
+        (fun ha ↦ .inl ha)
+        (fun hbc ↦ .inr hbc.2)
+    ⟩
+  )
+  (fun _ ⟨ hab, hac ⟩  ↦ 
+    (hab.elim
+            (fun ha ↦ .inl ha)
+            (fun hb ↦
+                (
+                  hac.elim
+                  (fun ha ↦ .inl ha)
+                  (fun hc ↦ .inr ⟨hb, hc ⟩)
+                )
+            )
+    )
+  )
+
+example : (A \ B)ᶜ = Aᶜ ∪ B :=
+Subset.antisymm
+(
+  fun x nh ↦ 
+    by_contra fun n ↦ 
+      let ha : x ∈ A := by_contra fun hna ↦ n (.inl hna)
+      let hnb : x ∉ B := fun hb ↦ n (.inr hb)
+      nh ⟨ ha, hnb ⟩
+)
+( fun _ h nh ↦ 
+  match h with
+  | .inl hac => hac nh.1
+  | .inr hb => nh.2 hb)
 ```

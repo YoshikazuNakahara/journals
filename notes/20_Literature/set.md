@@ -107,4 +107,19 @@ Subset.antisymm
   match h with
   | .inl hac => hac nh.1
   | .inr hb => nh.2 hb)
+
+example (h1 : ∀ x, x ∈ A ∩ B → False) (h2 : C ⊆ A ∧ D ⊆ B) :
+ ∀ x, x ∈ C ∩ D → False :=
+fun x ⟨ hc, hd ⟩ ↦ h1 x ⟨ h2.1 hc, h2.2 hd ⟩ 
+
+example : (A \ B) ∪ (B \ A) = (A ∪ B) \ (A ∩ B) :=
+  Subset.antisymm
+    -- 前方向
+    (fun _ h ↦ match h with
+      | .inl ⟨ha, hnb⟩ => ⟨.inl ha, fun ⟨_, hb⟩ ↦ hnb hb⟩
+      | .inr ⟨hb, hna⟩ => ⟨.inr hb, fun ⟨ha, _⟩ ↦ hna ha⟩)
+    -- 逆方向
+    (fun _ ⟨haub, haib⟩ ↦ match haub with
+      | .inl ha => .inl ⟨ha, fun hb ↦ haib ⟨ha, hb⟩⟩ -- by_contra 不要で直接書ける
+      | .inr hb => .inr ⟨hb, fun ha ↦ haib ⟨ha, hb⟩⟩)
 ```

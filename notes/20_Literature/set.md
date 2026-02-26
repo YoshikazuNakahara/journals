@@ -213,5 +213,40 @@ theorem distribution_counterexample :
   fun h_subset =>
     not_mem_iUnion_iInter_example (h_subset mem_iInter_iUnion_example)
 
+import Mathlib.Data.Set.Lattice
+import Mathlib.Data.Fin.Basic
 
+open Set
+
+def A (i j : Fin 2) : Set ℕ :=
+  if i = j then {0} else ∅
+
+/-- 右辺 ⋂ j, ⋃ i, A i j に 0 が属することの証明 -/
+lemma mem_iInter_iUnion_example : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j :=
+  mem_iInter.mpr fun j =>
+    -- A j j = {0} である証拠を強制的に型付けして作成
+    let h_eq : A j j = {0} := (if_pos rfl)
+    mem_iUnion.mpr ⟨j, h_eq.symm.subst (motive := fun s => 0 ∈ s) (mem_singleton 0)⟩
+
+/-- 左辺 ⋃ i, ⋂ j, A i j に 0 が属さないことの証明 -/
+lemma not_mem_iUnion_iInter_example : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j :=
+  fun h =>
+    let ⟨i, hi⟩ := mem_iUnion.mp h
+    match i with
+    | 0 => 
+      let h01 : 0 ∈ A 0 1 := mem_iInter.mp hi 1
+      -- 直接「A 0 1 = ∅」という等式を型指定付きで作成する
+      let h_eq : A 0 1 = ∅ := (rfl : (if 0 = 1 then {0} else ∅) = ∅)
+      h_eq.subst (motive := fun s => 0 ∈ s → False) (id) h01
+    | 1 => 
+      let h10 : 0 ∈ A 1 0 := mem_iInter.mp hi 0
+      -- 直接「A 1 0 = ∅」という等式を型指定付きで作成する
+      let h_eq : A 1 0 = ∅ := (rfl : (if 1 = 0 then {0} else ∅) = ∅)
+      h_eq.subst (motive := fun s => 0 ∈ s → False) (id) h10
+
+/-- 結論：反例の完成 -/
+theorem distribution_counterexample :
+    ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) :=
+  fun h_subset =>
+    not_mem_iUnion_iInter_example (h_subset mem_iInter_iUnion_example)
 ```

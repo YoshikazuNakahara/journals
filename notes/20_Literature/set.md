@@ -122,4 +122,25 @@ example : (A \ B) ∪ (B \ A) = (A ∪ B) \ (A ∩ B) :=
     (fun _ ⟨haub, haib⟩ ↦ match haub with
       | .inl ha => .inl ⟨ha, fun hb ↦ haib ⟨ha, hb⟩⟩ -- by_contra 不要で直接書ける
       | .inr hb => .inr ⟨hb, fun ha ↦ haib ⟨ha, hb⟩⟩)
+
+import Mathlib.Data.Set.Basic
+import Mathlib.Data.Set.Lattice
+open Set
+open Classical
+
+-- BEGIN
+variable {U : Type}
+variable (A B C : Set U)
+
+-- For this exercise these two facts are useful
+#check mem_iUnion
+#check mem_iInter
+
+variable {I J : Type} {A : I → J → Set U}
+
+example : (⋃ i, ⋂ j, A i j) ⊆ (⋂ j, ⋃ i, A i j) :=
+  fun _ h  ↦
+    let ⟨i, hj ⟩ := mem_iUnion.mp h
+    mem_iInter.mpr (fun j ↦ 
+      mem_iUnion.mpr ⟨i, mem_iInter.mp hj j⟩)
 ```

@@ -143,4 +143,39 @@ example : (⋃ i, ⋂ j, A i j) ⊆ (⋂ j, ⋃ i, A i j) :=
     let ⟨i, hj ⟩ := mem_iUnion.mp h
     mem_iInter.mpr (fun j ↦ 
       mem_iUnion.mpr ⟨i, mem_iInter.mp hj j⟩)
+
+import Mathlib.Data.Set.Lattice
+import Mathlib.Data.Fin.Basic
+
+open Set
+
+def A (i j : Fin 2) : Set ℕ :=
+  if i = j then {0} else ∅
+
+/-- 右辺に 0 が属することの証明 -/
+lemma mem_iInter_iUnion_example : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j := by
+  simp only [mem_iInter, mem_iUnion]
+  intro j
+  use j
+  simp [A]
+
+/-- 左辺に 0 が属さないことの証明 -/
+lemma not_mem_iUnion_iInter_example : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := by
+  simp only [mem_iUnion, mem_iInter, not_exists, not_forall]
+  intro i
+  -- i が 0 か 1 かで match 分岐（fin_cases の代わり）
+  match i with
+  | 0 => 
+      use 1
+      simp [A]
+  | 1 => 
+      use 0
+      simp [A]
+
+/-- 結論：反例の完成 -/
+theorem distribution_counterexample :
+    ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) := by
+  intro h_subset
+  have h_mem_left : 0 ∈ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := h_subset mem_iInter_iUnion_example
+  exact not_mem_iUnion_iInter_example h_mem_left
 ```

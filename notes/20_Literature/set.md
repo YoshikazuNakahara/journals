@@ -178,4 +178,40 @@ theorem distribution_counterexample :
   intro h_subset
   have h_mem_left : 0 ∈ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := h_subset mem_iInter_iUnion_example
   exact not_mem_iUnion_iInter_example h_mem_left
+
+import Mathlib.Data.Set.Lattice
+import Mathlib.Data.Fin.Basic
+
+open Set
+
+def A (i j : Fin 2) : Set ℕ :=
+  if i = j then {0} else ∅
+
+/-- 右辺 ⋂ j, ⋃ i, A i j に 0 が属することの証明 -/
+lemma mem_iInter_iUnion_example : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j :=
+  mem_iInter.mpr fun j =>
+    -- A j j の定義を直接展開して、0 ∈ {0} であることを示す
+    mem_iUnion.mpr ⟨j, by simp [A]⟩
+
+/-- 左辺 ⋃ i, ⋂ j, A i j に 0 が属さないことの証明 -/
+lemma not_mem_iUnion_iInter_example : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j :=
+  fun h =>
+    let ⟨i, hi⟩ := mem_iUnion.mp h
+    match i with
+    | 0 => 
+      -- i = 0 のとき、j = 1 で矛盾を導く
+      let h01 : 0 ∈ A 0 1 := mem_iInter.mp hi 1
+      show False from by simp [A] at h01
+    | 1 => 
+      -- i = 1 のとき、j = 0 で矛盾を導く
+      let h10 : 0 ∈ A 1 0 := mem_iInter.mp hi 0
+      show False from by simp [A] at h10
+
+/-- 結論：反例の完成 -/
+theorem distribution_counterexample :
+    ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) :=
+  fun h_subset =>
+    not_mem_iUnion_iInter_example (h_subset mem_iInter_iUnion_example)
+
+
 ```

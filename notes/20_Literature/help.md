@@ -358,6 +358,80 @@ example : ¬ (∀ {A : Type} {P Q : A → Prop}, (∀ y, ∃ x, P x → Q y) →
 3. **`use false` (Step 4)**:
 ここが最大の急所です。前提の `∃ x, P x → Q y` において、**「 ではない人（）」を一人連れてくるだけで、前提全体を真にできてしまう**（ が何であろうと関係なくなる）ことを突いています。
 4. **`nomatch` / `rfl**`:
+
+自動化タクティクを駆使する場合の「現代的な Mathlib スタイル」を解説します。
+
+「足場を探す」という観点では、**`simp` で定義をバラし、`aesop` や `tauto` で論理的な隙間を埋める**のが王道です。これらを使うと、先ほどの「一歩ずつ」の証明が驚くほど短くなります。
+
+---
+
+### 回答の概要
+
+1. **`simp [A]`**: `A` の定義（`if-then-else`）と集合の定義を一度に展開し、自明な項を整理します。
+2. **`aesop` (Automated Extensible Search Over Proofs)**:
+* `intro`, `apply`, `cases` などの論理操作を全自動で探索します。
+* 「誰かが存在するはずだ」「ならばそれを持ってこよう」という推論を代行してくれます。
+
+
+3. **`fin_cases`**: `Fin 2` のような小さな型の有限個の場合分けを一瞬で終わらせます。
+
+---
+
+### 自動化を極めた最短の証明例
+
+Mathlib のスタイルガイド [2026-02-08] に基づき、可読性と短さを両立させたコードです。
+
+```lean
+import Mathlib.Tactic
+
+-- A の定義を simp で使いやすくするため、属性を付与するか simp に渡す
+def A (i j : Fin 2) : Set ℕ :=
+  if i = j then {0} else ∅
+
+/-- 1. 右辺： aesop 一発で解決 -/
+lemma mem_iInter_iUnion_example_auto : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j := by
+  -- A の定義を展開し、論理探索を行う
+  aesop (add simp A)
+
+/-- 2. 左辺： fin_cases で構造的に解く -/
+lemma not_mem_iUnion_iInter_example_auto : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := by
+  simp [A]
+  intro i hi
+  -- i が 0 か 1 かを自動で場合分け
+  fin_cases i
+  · -- i = 0 のとき、j = 1 を見れば矛盾することを一瞬で指摘
+    exact (hi 1).elim
+  · -- i = 1 のとき、j = 0 を見れば矛盾
+    exact (hi 0).elim
+
+/-- 3. 結論： tauto で論理を閉じる -/
+theorem distribution_counterexample_auto :
+    ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) := by
+  -- 補題を組み合わせて矛盾を導く論理を自動化
+  tauto [mem_iInter_iUnion_example_auto, not_mem_iUnion_iInter_example_auto]
+
+```
+
+---
+
+### 「足場」を見つけるためのテクニック
+
+自動化を使うとき、何が起きているか分からなくなった場合の対処法（足場の探し方）がいくつかあります。
+
+* **`simp?`**: `simp` が内部でどの補題を使ったかを表示してくれます。これをコピーして貼り付けることで、ブラックボックスを「明示的な証明」に置き換えられます。
+* **`aesop?`**: `aesop` が見つけた証明のステップをタクティクとして出力してくれます。
+* **`apply?` / `exact?**`: 「今ある仮定から、この結論を導けるライブラリの定理はないか？」を検索してくれます。
+
+---
+
+### Mathlib スタイルのポイント
+
+* **`hi.elim`**: `0 ∈ ∅` という仮定 `hi` があるとき、`False.elim` を呼び出す代わりに `.elim` と書くだけで「空集合に属するなんてありえない」と一蹴できます。
+* **`fin_cases`**: 手動で `match i with` と書くよりも、Mathlib ではこのタクティクが標準的です。
+
+自動化を使うと、「どう解くか」よりも「どの補題を組み合わせるか」という**パズル感覚**が強くなります。
+
+次は、**`simp?` などの「提案機能」を使って、自動化から厳密なコードを生成する過程**を実際に体験してみますか？
 Lean特有のタクティクです。`nomatch` は「起こり得ない状況（`false = true`）」を却下し、`rfl` は「同じものの等号」を確認します。
 
 ---

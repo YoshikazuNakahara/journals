@@ -284,4 +284,22 @@ example : (⋃ i, ⋃ j, A i ∪ B j) = (⋃ i, A i) ∪ (⋃ j, B j) := by
     · -- x ∈ B j の場合、適当な i を持ってくる必要がある
       obtain ⟨i⟩ := ‹Nonempty I›
       exact ⟨i, j, .inr hB⟩
+
+import Mathlib.Tactic
+
+-- 型変数の宣言
+variable {α β γ : Type}
+variable {a d : α} {b e : β} {c f : γ}
+
+/-- 3つ組の等号は、各要素の等号と同値である -/
+theorem triple_eq_iff : (a, b, c) = (d, e, f) ↔ a = d ∧ b = e ∧ c = f := by
+constructor
+· intro h
+  have h_ad : a = d := (Prod.mk.inj h).1
+  have h_becf : (b, c) = (e, f) := (Prod.mk.inj h).2
+  have h_be : b = e := (Prod.mk.inj h_becf).1
+  have h_cf : c = f := (Prod.mk.inj h_becf).2
+  exact ⟨ h_ad, h_be, h_cf ⟩
+· rintro ⟨ rfl, rfl, rfl ⟩
+  rfl
 ```

@@ -302,4 +302,76 @@ constructor
   exact ⟨ h_ad, h_be, h_cf ⟩
 · rintro ⟨ rfl, rfl, rfl ⟩
   rfl
+---
+
+### 1. 集合から論理への変換（メンバーシップ補題）
+
+`ext` で要素 $x$ を導入した後に、集合の記号を論理記号（`∧`, `∨`, `¬`）にバラすためのルールです。
+
+| 集合の操作 | Mathlib 補題名 | 論理への変換 |
+| --- | --- | --- |
+| **和集合 ($\cup$)** | `mem_union` | $x \in A \cup B \iff x \in A \lor x \in B$ |
+| **共通部分 ($\cap$)** | `mem_inter` | $x \in A \cap B \iff x \in A \land x \in B$ |
+| **補集合 ($A^c$)** | `mem_compl` | $x \in A^c \iff \neg (x \in A)$ |
+| **差集合 ($A \setminus B$)** | `mem_diff` | $x \in A \setminus B \iff x \in A \land \neg (x \in B)$ |
+| **直積 ($\times$)** | `mem_prod` | $(x, y) \in A \times B \iff x \in A \land y \in B$ |
+| **包含関係 ($\subseteq$)** | `subset_def` | $A \subseteq B \iff \forall x, x \in A \to x \in B$ |
+
+---
+
+### 2. 論理の基本法則（分配・ド・モルガン）
+
+集合をバラした後に、論理式そのものを変形するためのルールです。
+
+#### 分配法則 (Distributive Laws)
+
+* **`and_or_left`**: $P \land (Q \lor R) \iff (P \land Q) \lor (P \land R)$
+* **`or_and_left`**: $P \lor (Q \land R) \iff (P \lor Q) \land (P \lor R)$
+* ※ 右側に分配する場合は `_right` になります。
+
+
+
+#### ド・モルガンの法則 (De Morgan's Laws)
+
+* **`not_and_or`**: $\neg (P \land Q) \iff \neg P \lor \neg Q$
+* **`not_or_and`**: $\neg (P \lor Q) \iff \neg P \land \neg Q$
+
+#### 二重否定・排中律 (Classical Logic)
+
+* **`not_not`**: $\neg \neg P \iff P$
+* **`by_cases`**: $P \lor \neg P$ を使ったケース分け
+
+---
+
+### 3. 添字付きの集合（$\bigcup$, $\bigcap$）と量子化（$\exists$, $\forall$）
+
+今回苦戦した `⋃` などの大きな演算子をバラすルールです。
+
+| 集合の操作 | Mathlib 補題名 | 論理への変換 |
+| --- | --- | --- |
+| **任意個の和 ($\bigcup_i A_i$)** | `mem_iUnion` | $x \in \bigcup_i A_i \iff \exists i, x \in A_i$ |
+| **任意個の積 ($\bigcap_i A_i$)** | `mem_iInter` | $x \in \bigcap_i A_i \iff \forall i, x \in A_i$ |
+| **空でない時の定数和** | `iUnion_const` | $\bigcup_{i \in I} A = A$ （$I$ が `Nonempty` の時） |
+
+---
+
+### 4. 証明を効率化する「コツ」
+
+1. **`simp` にまとめて渡す**:
+`simp only [mem_union, mem_inter, mem_prod]` のように、変換ルールをまとめて渡すと、一気に論理式の形まで落とし込めます。
+2. **`push_neg` タクティク**:
+否定 $\neg$ が $\forall$ や $\exists$ の外側にあるとき、`push_neg` と打つだけでド・モルガンの法則を自動適用して中身に否定を押し込んでくれます。非常に便利です。
+3. **`tauto` タクティク**:
+集合をバラして、純粋に「論理的に正しいだけの式（トートロジー）」になったら、`tauto` と打つだけで証明が終了します。
+
+[Image illustrating the hierarchy of proof steps: starting with a Set Equality, using Extensionality to get Element-wise Logic, then applying Distributive Laws, and finally closing with Tautology tactics]
+
+---
+
+### まとめ：回答の概要
+
+* **変換の要は `mem_...` 系補題** です。これらで「集合」から「論理」へ翻訳します。
+* **変形の要は `and_or_left` や `not_and_or**` です。
+* **最後は `tauto` や `aesop**` に任せると、細かい論理パズルをスキップできます。
+
 ```

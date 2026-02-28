@@ -249,4 +249,39 @@ theorem distribution_counterexample :
     ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) :=
   fun h_subset =>
     not_mem_iUnion_iInter_example (h_subset mem_iInter_iUnion_example)
+
+import Mathlib.Data.Set.Lattice
+
+open Set
+
+variable {U I J : Type}
+variable {A : I → Set U}
+variable {B : J → Set U}
+-- I と J が空でないという仮定は必須です
+variable [Nonempty I] [Nonempty J]
+
+example : (⋃ i, ⋃ j, A i ∪ B j) = (⋃ i, A i) ∪ (⋃ j, B j) := by
+  -- 1. 集合の等式を「任意の要素 x についての同値性」に変換する
+  ext x
+  
+  -- 2. ⋃ を ∃（存在する）に、∪ を ∨（または）に翻訳する
+  simp only [mem_iUnion, mem_union]
+  
+  -- 3. 双方向の証明（↔）を 2 つのゴール（→ と ←）に分割する
+  constructor
+  
+  · -- 【左辺から右辺の証明】
+    -- 仮定から変数 i, j と、どちらの集合に属しているかの条件を取り出す
+    rintro ⟨i, j, hA | hB⟩
+    · exact .inl ⟨i, hA⟩ -- x ∈ A i の場合
+    · exact .inr ⟨j, hB⟩ -- x ∈ B j の場合
+
+  · -- 【右辺から左辺の証明】
+    rintro (⟨i, hA⟩ | ⟨j, hB⟩)
+    · -- x ∈ A i の場合、適当な j を持ってくる必要がある
+      obtain ⟨j⟩ := ‹Nonempty J›
+      exact ⟨i, j, .inl hA⟩
+    · -- x ∈ B j の場合、適当な i を持ってくる必要がある
+      obtain ⟨i⟩ := ‹Nonempty I›
+      exact ⟨i, j, .inr hB⟩
 ```

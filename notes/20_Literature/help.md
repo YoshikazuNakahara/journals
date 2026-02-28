@@ -379,36 +379,33 @@ example : ¬ (∀ {A : Type} {P Q : A → Prop}, (∀ y, ∃ x, P x → Q y) →
 
 ### 自動化を極めた最短の証明例
 
-Mathlib のスタイルガイド [2026-02-08] に基づき、可読性と短さを両立させたコードです。
-
 ```lean
+import Mathlib.Data.Set.Lattice
+import Mathlib.Data.Fin.Basic
 import Mathlib.Tactic
 
--- A の定義を simp で使いやすくするため、属性を付与するか simp に渡す
+open Set
+
 def A (i j : Fin 2) : Set ℕ :=
   if i = j then {0} else ∅
 
-/-- 1. 右辺： aesop 一発で解決 -/
-lemma mem_iInter_iUnion_example_auto : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j := by
-  -- A の定義を展開し、論理探索を行う
-  aesop (add simp A)
+/-- 1. 右辺： aesop に A の定義を教えて一発解決 -/
+lemma mem_iInter_iUnion_example_aesop : 0 ∈ ⋂ j : Fin 2, ⋃ i : Fin 2, A i j := by
+  -- 「A の定義を展開して、論理的に探索して」と頼む
+  aesop? (add simp A)
 
-/-- 2. 左辺： fin_cases で構造的に解く -/
-lemma not_mem_iUnion_iInter_example_auto : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := by
-  simp [A]
-  intro i hi
-  -- i が 0 か 1 かを自動で場合分け
-  fin_cases i
-  · -- i = 0 のとき、j = 1 を見れば矛盾することを一瞬で指摘
-    exact (hi 1).elim
-  · -- i = 1 のとき、j = 0 を見れば矛盾
-    exact (hi 0).elim
+/-- 2. 左辺： 同じく aesop で解決 -/
+lemma not_mem_iUnion_iInter_example_aesop : 0 ∉ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j := by
+  -- 否定の証明も、aesop は内部で intro を試みるので成功します
+  aesop? (add simp A)
 
-/-- 3. 結論： tauto で論理を閉じる -/
-theorem distribution_counterexample_auto :
+/-- 3. 結論： 全体を aesop で繋ぐ -/
+theorem distribution_counterexample_aesop :
     ¬ (⋂ j : Fin 2, ⋃ i : Fin 2, A i j ⊆ ⋃ i : Fin 2, ⋂ j : Fin 2, A i j) := by
-  -- 補題を組み合わせて矛盾を導く論理を自動化
-  tauto [mem_iInter_iUnion_example_auto, not_mem_iUnion_iInter_example_auto]
+  -- 上記の補題を「信頼できるルール(safe)」として追加
+  aesop? (add safe mem_iInter_iUnion_example_aesop, 
+             safe not_mem_iUnion_iInter_example_aesop,
+             simp subset_def)
 
 ```
 

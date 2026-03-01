@@ -329,6 +329,15 @@ simp only [mem_prod]
 simp only [mem_inter_iff]
 simp only [mem_prod]
 tauto
+
+theorem powerset_subset_powerset_iff : 
+𝒫 A ⊆ 𝒫 B ↔ A ⊆ B := by
+constructor
+· intro h
+  have hA : A ∈ 𝒫 A := subset_refl A
+  exact h hA
+· intro h s hs
+  exact subset_trans hs h
 ```
 ---
 

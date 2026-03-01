@@ -590,3 +590,91 @@ example (f : α → Set β) : (∀ x, f x ∈ A ∪ B) ↔ (∀ x, f x ∈ A ∨
 
 ---
 
+### 1. 矛盾（False）からの証明
+
+前提に矛盾がある場合、`tauto` はそれを即座に見抜いて証明を終了させます。
+
+* **例**: $(P \land \neg P) \to Q$
+* **集合での例**: $x \in A \cap A^c \to x \in B$
+```lean
+example (h : x ∈ A ∩ Aᶜ) : x ∈ B := by
+  simp [mem_inter_iff, mem_compl] at h
+  tauto -- x ∈ A と ¬(x ∈ A) の矛盾を自動検出
+
+```
+
+
+
+---
+
+### 2. 排中律（$P \lor \neg P$）が絡むケース
+
+「$P$ か $P$ でないか」でケース分けが必要な問題も、`tauto` は自動で処理します。
+
+* **例**: $(P \to Q) \to (\neg Q \to \neg P)$ （対偶）
+* **集合での例**: $(A \cup B)^c = A^c \cap B^c$ （ド・モルガン）
+```lean
+example : (A ∪ B)ᶜ = Aᶜ ∩ Bᶜ := by
+  ext x
+  simp [mem_compl, mem_union, mem_inter_iff]
+  tauto -- ド・モルガンの論理的な正しさを判定
+
+```
+
+
+
+---
+
+### 3. 冗長な条件の整理
+
+同じ条件が複数回出てきたり、複雑に絡み合っているが、整理すると当たり前になる場合です。
+
+* **例**: $P \to (Q \to P)$
+* **集合での例**: $A \cap (A \cup B) = A$ （吸収律）
+```lean
+example : A ∩ (A ∪ B) = A := by
+  ext x
+  simp [mem_inter_iff, mem_union]
+  tauto -- 「x ∈ A かつ (x ∈ A または x ∈ B)」が「x ∈ A」と等価であることを判定
+
+```
+
+
+
+---
+
+### 4. 複雑な「ならば（$\to$）」の連鎖
+
+「$A$ ならば $B$、$B$ ならば $C$、ゆえに $A$ ならば $C$」といった三段論法が複雑に組み合わさった場合です。
+
+* **例**: $(P \to Q) \land (Q \to R) \to (P \to R)$
+* **集合での例**: $A \subseteq B \land B \subseteq C \to A \subseteq C$
+```lean
+example (h1 : A ⊆ B) (h2 : B ⊆ C) : A ⊆ C := by
+  rw [subset_def] at *
+  -- ⊢ ∀ x, x ∈ A → x ∈ C
+  intro x
+  tauto -- h1 と h2 の連鎖を自動で解く
+
+```
+
+
+
+---
+
+### `tauto` を使う時の「心得」
+
+1. **量化子（$\forall, \exists$）には弱い**:
+`tauto` は「命題論理」のプロですが、「述語論理（$x$ によって中身が変わる式）」の深い推論は苦手です。そのため、**`ext x` や `intro x` で要素を固定してから使う**のが鉄則です。
+2. **`simp` とのコンビネーション**:
+今回のあなたの証明のように、`simp [mem_...]` で「集合の言葉」を「論理の言葉（$\land, \lor, \to, \neg$）」に翻訳した直後に `tauto` を投げるのが、最も成功率の高いパターンです。
+
+---
+
+### まとめ：回答の概要
+
+* **矛盾の検出**（$P$ と $\neg P$ がある）
+* **対偶やド・モルガン**（否定の絡む論理変形）
+* **包含関係の連鎖**（三段論法）
+* **吸収律**（余計な条件の削除）
+これらはすべて `tauto` で解決可能です。

@@ -338,6 +338,112 @@ constructor
   exact h hA
 · intro h s hs
   exact subset_trans hs h
+
+import Mathlib.Data.Set.Basic
+import Mathlib.Tactic
+
+-- 文1: 最小値の存在
+theorem prop : ∃ x : ℕ, ∀ y : ℕ, x ≤ y := by
+  use 0
+  intro y
+  exact Nat.zero_le y
+
+theorem prop1 : ¬ ∃ x : ℤ , ∀ y : ℤ , x ≤ y := by
+push_neg
+intro z
+use (z - 1)
+linarith
+
+-- 文2: 最大値の存在
+theorem prop2 : ¬ ∃ y : ℕ, ∀ x : ℕ, x ≤ y := by
+  push_neg
+  intro y
+  use y + 1
+  exact Nat.lt_succ_self y
+
+
+-- 文3: 稠密性の存在
+theorem prop3 :
+¬ (∀ x y : ℕ, x ≤ y ∧ x ≠ y → ∃ z : ℕ, x ≤ z ∧ z ≤ y ∧ x ≠ z ∧ y ≠ z) := by
+  push_neg
+  use 0, 1
+  constructor
+  · tauto
+  · intro n h0 h1 h00
+    have h_le_1 : 1 ≤ n := Nat.lt_iff_le_and_ne.mpr ⟨h0, h00⟩
+    linarith
+
+theorem prop31 :
+(∀ x y : ℚ, x < y → ∃ z : ℚ, x < z ∧ z < y) := by
+intro x y hxy
+use (x + y) / 2
+have h_pos : (0 : ℚ) < 2 := by norm_num
+constructor
+· rw [Rat.lt_div_iff' h_pos]
+  rw [two_mul x]
+  rw [add_lt_add_iff_left]
+  exact hxy
+· -- ステップ1: 分母を払う (x + y < y * 2)
+  -- div_lt_iff に「2 > 0」という証拠を渡します
+  rw [Rat.div_lt_iff' h_pos]
+  
+  -- ステップ2: y * 2 を y + y に書き換える
+  -- mul_two y は y * 2 = y + y という補題です
+  rw [two_mul y]
+  
+  -- ステップ3: 両辺から共通の y を消す (x < y)
+  -- add_lt_add_iff_right y は a + y < b + y ↔ a < b という補題です
+  rw [add_lt_add_iff_right]
+  
+  -- 最後に、仮定 h (x < y) と一致するので終了
+  exact hxy
+
+theorem min_nat_div : ∃ x : ℕ, ∀ y : ℕ, x ∣ y := by
+  use 1
+  intro y
+  exact one_dvd y
+
+theorem max_nat_div : ∃ y : ℕ, ∀ x : ℕ, x ∣ y := by
+  use 0
+  intro x
+  exact dvd_zero x
+
+theorem prop32:
+  ¬ (∀ x y : ℕ, x ∣ y ∧ x ≠ y → ∃ z : ℕ, x ∣ z ∧ z ∣ y ∧ x ≠ z ∧ y ≠ z) := by
+  push_neg
+  use 1, 2
+  constructor
+  · aesop
+  · intro z h1 h2 hn1
+    have h_prime : Nat.Prime 2 := Nat.prime_two
+    have h_cases := (Nat.dvd_prime h_prime).mp h2
+    rcases h_cases with rfl | rfl
+    · contradiction
+    · rfl
+
+theorem prop13 : ∃ x : Set ℕ, ∀ y: Set ℕ, x ⊆ y := by
+  use ∅
+  intro y
+  simp only [Set.empty_subset]
+
+theorem prop23: ∃ y: Set ℕ, ∀ x: Set ℕ, x ⊆ y := by
+  use Set.univ
+  intro x
+  simp only [Set.subset_univ]
+
+theorem prop33 :
+  -- 稠密性の否定
+  ¬ (∀ x y : Set ℕ, x ⊆ y ∧ x ≠ y → ∃ z : Set ℕ, x ⊆ z ∧ z ⊆ y ∧ x ≠ z ∧ y ≠ z) := by
+  push_neg
+  use ∅, {0}
+  constructor
+  · simp
+  · intro z h2 h3 h4
+    -- z ⊆ {0} ならば z は ∅ か {0} のどちらか
+    have h_cases : z = ∅ ∨ z = {0} := Set.subset_singleton_iff_eq.mp h3
+    rcases h_cases with rfl | rfl
+    · contradiction
+    · rfl
 ```
 ---
 

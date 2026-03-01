@@ -316,6 +316,19 @@ simp only [mem_union]
 simp only [mem_prod]
 simp [and_or_left]
 
+import Mathlib.Data.Set.Lattice
+
+open Set
+
+variable {α : Type}
+variable {A B C D: Set α}
+
+theorem prod_union_distrib : (A ∩ B) ×ˢ (C ∩ D) = (A ×ˢ C) ∩ (B ×ˢ D) := by
+ext ⟨ x, y ⟩
+simp only [mem_prod]
+simp only [mem_inter_iff]
+simp only [mem_prod]
+tauto
 ```
 ---
 

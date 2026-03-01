@@ -302,6 +302,21 @@ constructor
   exact ⟨ h_ad, h_be, h_cf ⟩
 · rintro ⟨ rfl, rfl, rfl ⟩
   rfl
+
+import Mathlib.Data.Set.Lattice
+
+open Set
+
+variable {α β : Type}
+variable {A : Set α} {B C : Set β}
+
+theorem prod_union_distrib : A ×ˢ (B ∪ C) = (A ×ˢ B) ∪ (A ×ˢ C) := by
+ext ⟨ x, y ⟩
+simp only [mem_union]
+simp only [mem_prod]
+simp [and_or_left]
+
+```
 ---
 
 ### 1. 集合から論理への変換（メンバーシップ補題）
@@ -364,8 +379,6 @@ constructor
 3. **`tauto` タクティク**:
 集合をバラして、純粋に「論理的に正しいだけの式（トートロジー）」になったら、`tauto` と打つだけで証明が終了します。
 
-[Image illustrating the hierarchy of proof steps: starting with a Set Equality, using Extensionality to get Element-wise Logic, then applying Distributive Laws, and finally closing with Tautology tactics]
-
 ---
 
 ### まとめ：回答の概要
@@ -373,5 +386,3 @@ constructor
 * **変換の要は `mem_...` 系補題** です。これらで「集合」から「論理」へ翻訳します。
 * **変形の要は `and_or_left` や `not_and_or**` です。
 * **最後は `tauto` や `aesop**` に任せると、細かい論理パズルをスキップできます。
-
-```

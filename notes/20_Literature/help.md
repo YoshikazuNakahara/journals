@@ -684,3 +684,5 @@ norm_num,具体的な数値の計算,"100+200=300, 25<40"
 ring,変数を含む多項式の整理,(x+y)2=x2+2xy+y2
 simp,定義や規則に基づいた書き換え,"x+0=x, A∧A=A"
 arith (linarith),線形な不等式の鎖を解く,a<b∧b<c⟹a<c
+
+aesop, tauto, itauto

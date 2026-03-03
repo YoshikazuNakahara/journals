@@ -249,49 +249,48 @@ Lean でこのように具体的な反例を書くと、以下のことが明確
 この証明では、`Nat.Even`（偶数）と `Nat.Odd`（奇数）という Mathlib の定義を利用します。
 
 ```lean
-import Mathlib.Data.Nat.Parity
+import Mathlib.Data.Nat.Basic
+import Mathlib.Tactic
 
 /-!
-# 全称記号における選言の分配法則の不在の証明
+# 全称記号における選言の分配法則の不在 (Mod版)
 
 命題: (∀ x, P x ∨ Q x) → (∀ x, P x) ∨ (∀ x, Q x)
-この命題が「妥当ではない」ことを、偶数と奇数の性質を用いて示します。
+P x を「x は 2 で割り切れる」、Q x を「x は 2 で割ると 1 余る」として反例を示します。
 -/
 
 theorem forall_or_distrib_invalid :
     -- この全称命題の否定を証明する
     ¬ (∀ (P Q : ℕ → Prop), (∀ x, P x ∨ Q x) → (∀ x, P x) ∨ (∀ x, Q x)) := by
   
-  -- 否定を証明するために、仮に「成り立つ」と仮定して矛盾を導く
   intro h_all
   
-  -- 1. 具体的な述語 P, Q を定義する
-  let P := fun (x : ℕ) => Nat.Even x
-  let Q := fun (x : ℕ) => Nat.Odd x
+  -- 1. 具体的な述語 P, Q を定義 (mod 2 を使用)
+  let P := fun (x : ℕ) => x % 2 = 0
+  let Q := fun (x : ℕ) => x % 2 = 1
   
-  -- 2. 前件「全ての自然数は偶数または奇数である」が真であることを示す
+  -- 2. 前件「全ての自然数は 2 で割ると余りが 0 か 1 である」を示す
   have h_left : ∀ x, P x ∨ Q x := by
     intro x
-    exact Nat.even_or_odd x
+    -- Nat.mod_two_eq_zero_or_one は標準的な補題ですが、
+    -- 見つからない場合は Nat.mod_lt x (by norm_num) 等から導けます。
+    exact Nat.mod_two_eq_zero_or_one x
     
-  -- 3. 全体仮定 h_all に、自作した P, Q と h_left を適用する
-  -- すると、結論の「(∀ x, P x) ∨ (∀ x, Q x)」が得られる
+  -- 3. 全体仮定 h_all に適用
   have h_res : (∀ x, P x) ∨ (∀ x, Q x) := h_all P Q h_left
   
-  -- 4. 結論の「または」のどちらが正しくても矛盾することを導く
+  -- 4. 矛盾の導出
   cases h_res
-  · -- ケース 1: 全ての数が偶数である (∀ x, P x)
-    rename_i h_all_even
-    -- x = 1 を代入すると、1 は偶数であるという結論が出るが、これは偽
-    have h1 : P 1 := h_all_even 1
-    -- P 1 は 1.Even なので、矛盾を指摘
-    simp [P] at h1
-  · -- ケース 2: 全ての数が奇数である (∀ x, P x)
-    rename_i h_all_odd
-    -- x = 0 を代入すると、0 は奇数であるという結論が出るが、これは偽
-    have h0 : Q 0 := h_all_odd 0
-    simp [Q] at h0
-
+  · -- ケース 1: 全ての数が 2 で割り切れる
+    rename_i h_all_P
+    -- x = 1 を代入すると 1 % 2 = 0 となり矛盾
+    have h1 : 1 % 2 = 0 := h_all_P 1
+    norm_num at h1
+  · -- ケース 2: 全ての数が 2 で割ると 1 余る
+    rename_i h_all_Q
+    -- x = 0 を代入すると 0 % 2 = 1 となり矛盾
+    have h0 : 0 % 2 = 1 := h_all_Q 0
+    norm_num at h0
 
 ```
 

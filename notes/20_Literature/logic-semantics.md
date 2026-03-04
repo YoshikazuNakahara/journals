@@ -312,3 +312,170 @@ theorem forall_or_distrib_invalid :
 | **$\exists$** | **$\lor$** | **Yes** | 誰かが $P$ または $Q$ $\iff$ 誰か $P$ ∨ 誰か $Q$ |
 | **$\forall$** | **$\lor$** | **No** | 全員が男か女 $\not\implies$ 全員男 ∨ 全員女 |
 | **$\exists$** | **$\land$** | **No** | 誰かが男かつ誰かが女 $\not\implies$ 誰かが男で女 |
+
+```lean
+import Mathlib.Tactic
+
+-- 解釈（Interpretation）の定義
+structure Interpretation where
+  v : Prop → Prop
+  v_false : v False ↔ False
+  -- 必要に応じて v_imp : v (P → Q) ↔ (v P → v Q) なども追加可能
+
+-- 【証明】不整合な集合は任意の式を含意する
+theorem inconsistent_entails_all (Γ : Set Prop) 
+    (h_incon : ¬ ∃ (I : Interpretation), ∀ ψ ∈ Γ, I.v ψ) (φ : Prop) :
+    ∀ (I : Interpretation), (∀ ψ ∈ Γ, I.v ψ) → I.v φ := by
+  intro I h_model
+  -- Γを充足するモデルが存在しないという仮定に矛盾する
+  exfalso
+  apply h_incon
+  exact ⟨I, h_model⟩
+
+-- 【証明】その逆：全ての式を含意するなら不整合である
+theorem entails_all_is_inconsistent (Γ : Set Prop)
+    (h_entails : ∀ (φ : Prop), ∀ (I : Interpretation), (∀ ψ ∈ Γ, I.v ψ) → I.v φ) :
+    ¬ ∃ (I : Interpretation), ∀ ψ ∈ Γ, I.v ψ := by
+  rintro ⟨I, h_model⟩
+  -- φ として False を指定すると、I.v False が導かれる
+  have h_v_false : I.v False := h_entails False I h_model
+  -- Interpretation の定義（v_false）により、これは False と同値
+  rw [I.v_false] at h_v_false
+  exact h_v_false
+
+-- 述語論理のモデル構造
+structure PredModel where
+  D : Type
+  P : D → Prop
+  c : D
+  d : D
+
+-- 第2問: {P(c), ¬P(d), ψ} と {P(c), ¬P(d), ¬ψ} が共に一貫することの証明
+theorem consistency_example : 
+    ∃ (M : PredModel) (Q : M.D → Prop), (M.P M.c ∧ ¬M.P M.d ∧ Q M.c) ∧ 
+    ∃ (M' : PredModel) (Q' : M'.D → Prop), M'.P M'.c ∧ ¬M'.P M'.d ∧ ¬Q' M'.c := by
+  -- モデル1: ψ (Q c) が真
+  use { D := Fin 2, P := (· = 0), c := 0, d := 1 }, (· = 0)
+  constructor
+  · decide -- 構造体の中身を自動的に計算して証明
+  -- モデル2: ¬ψ (¬Q' c) が真
+  use { D := Fin 2, P := (· = 0), c := 0, d := 1 }, (λ _ => False)
+  decide
+
+---
+
+-- 第3問: 論理式の分類
+
+-- ① ∃x ∀y R(y,x) ∧ R(x,y) : Satisfiable
+-- 領域が1つのとき、Rが常に真であれば成立
+theorem formula_1_sat : ∃ (D : Type) (R : D → D → Prop), ∃ x, ∀ y, R y x ∧ R x y := by
+  use Unit, (λ _ _ => True), Unit.unit
+  decide
+
+-- ② (∃x ∀y R(x,y)) → (∃x ∃y R(x,y)) : Valid
+-- 領域が空でないことが前提
+theorem formula_2_valid [Nonempty D] (R : D → D → Prop) :
+    (∃ x, ∀ y, R x y) → (∃ x, ∃ y, R x y) := by
+  rintro ⟨x, hx⟩
+  use x, Classical.arbitrary D
+  exact hx _
+
+-- ③ (∃x P(x)) ∧ (∃x ¬P(x)) : Satisfiable
+-- 少なくとも2つの異なる性質を持つ要素が必要
+theorem formula_3_sat : ∃ (D : Type) (P : D → Prop), (∃ x, P x) ∧ (∃ x, ¬ P x) := by
+  use Fin 2, (· = 0)
+  decide
+```
+
+## 1. 意味論（Semantics）の厳密な定義
+
+最初の `type mismatch` は、**「論理式としての $\bot$ (False)」**と**「Leanの型としての `False`」**を混同したことが原因でした。
+
+* **解決策**: `Interpretation` 構造体を作り、`v False ↔ False` という性質を持たせました。
+* **教訓**: メタ論理（論理そのものを対象とする数学）を扱うときは、対象言語の記号とその意味（真偽値）を橋渡しする「解釈」の定義を明示することが、型エラーを防ぐ鍵となります。
+
+## 2. 有限モデルと `decide` タクティク
+
+具体例（反例や充足可能性）を示す際、`Fin n` や `Unit` といった有限な型を領域に選ぶと、証明が非常に楽になります。
+
+* **解決策**: `use Fin 2` のように具体的な領域を指定し、`decide` タクティクを使用しました。
+* **教訓**:
+* `decide` は、対象が `Decidable`（判定可能）であれば、定義を自動的に展開して計算してくれます。
+* `simp` や `unfold` を並べるよりも、最終的に数値的な判定に持ち込んで `decide` させるのが Mathlib 流のスマートな書き方です。
+
+
+
+## 3. 存在証明における構造体の扱い
+
+`let` でモデルに名前を付けると、Leanはその中身を「隠された定義」として扱うことがあり、証明の途中で `unfold` が必要になるなどの手間が増えます。
+
+* **解決策**: `use { D := ..., ... }` のように、`use` タクティクに直接リテラル（構造体の実体）を渡しました。
+* **教訓**: 存在証明（$\exists$）では、定義と適用を分けるよりも、その場で作って渡すほうが Lean の型推論やタクティク（特に `decide`）との相性が良くなります。
+
+---
+
+### まとめ：Leanで論理学を解くためのフローチャート
+
+| ステップ | 内容 | 使うツール |
+| --- | --- | --- |
+| **1. 抽象化** | 解釈（Interpretation）の性質を定義 | `structure` |
+| **2. 具体化** | 有限な型（`Fin n`, `Unit`）をモデルに選ぶ | `use` |
+| **3. 自動化** | 具体的な真偽判定をLeanに計算させる | `decide` |
+| **4. 一般化** | 妥当性（Valid）を示すときは推論を進める | `rintro`, `rcases` |
+
+---
+
+### 1. 妥当ではないことの定義
+
+論理式 $\phi$ が妥当ではない（$\not\vDash \phi$）とは、次と同値です。
+
+> **「$\neg \phi$ を満たすモデル $M$ が少なくとも1つ存在する」**
+
+Leanでは、`¬ ∀ (D : Type) (R : D → D → Prop), ...` を証明する代わりに、反例を具体的に `use` で提示します。
+
+### 2. 反例モデルの構成例
+
+第3問の① $\exists x \forall y R(y,x) \land R(x,y)$ が**妥当ではない**ことを証明してみましょう。
+
+#### 戦略
+
+* **式の内容**: 「ある $x$ が存在して、すべての $y$ に対して $R(y,x)$ かつ $R(x,y)$ が成り立つ」
+* **反例（否定を真にする）**: 「すべての $x$ に対して、ある $y$ が存在して $R(y,x)$ か $R(x,y)$ のどちらかが偽になる」
+* **最も簡単な反例**: 空の関係 $R$（常に偽）を持つモデル。
+
+```lean
+import Mathlib.Tactic
+
+-- ① が Valid ではない（＝否定の充足可能性）を証明する
+theorem formula_1_not_valid : 
+    ¬ (∀ (D : Type) (R : D → D → Prop), ∃ x, ∀ y, R y x ∧ R x y) := by
+  -- 否定を証明するために、仮定 h から矛盾を導く
+  intro h
+  -- 具体的な反例モデルとして、領域 D = Fin 2, 関係 R = (常に偽) を与える
+  specialize h (Fin 2) (λ _ _ => False)
+  -- このとき h は ∃ x, ∀ y, False ∧ False となり、矛盾する
+  rcases h with ⟨x, hx⟩
+  specialize hx 0 -- 任意の y (例えば 0) に対して矛盾を指摘
+  exact hx.left -- False なので矛盾
+
+```
+
+---
+
+### 3. 反例構成のコツ（整理）
+
+反例を作る際は、以下の「最小構成」を意識すると `decide` や `simp` が通りやすくなります。
+
+| 対象の式 | 反例の作り方（一例） | 推奨される型 |
+| --- | --- | --- |
+| **全称記号 ($\forall x \phi$)** | $\phi$ が偽になる要素を1つ入れる | `Fin 2` 以上 |
+| **存在記号 ($\exists x \phi$)** | 全ての要素で $\phi$ が偽になるように設定 | `Unit` や `Fin 1` |
+| **含意 ($P \to Q$)** | $P$ を真、$Q$ を偽にする | `Bool` や `Prop` の直接指定 |
+
+### 4. まとめ：Leanで「うまくいく」ための思考プロセス
+
+1. **ゴールが $\exists$ なら**: 迷わず `use` で具体的な型と定義を与える。
+2. **ゴールが $\neg \forall$ なら**: `intro` で仮定に追い込み、`specialize` で具体的な反例をぶつける。
+3. **判定が複雑なら**: `decide` に任せられるよう、可能な限り `Fin n` などの計算可能な型でモデルを作る。
+
+---

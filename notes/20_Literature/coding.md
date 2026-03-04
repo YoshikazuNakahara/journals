@@ -157,7 +157,7 @@ theorem cond10 : ∃ x, blue myWorld x ∧ ∃ y, green myWorld y ∧ above x y 
 end World
 ```
 
-```
+```lean
 import Mathlib.Tactic
 
 -- 1. 独自の名前で定義し、自動展開されるよう abbrev を使います

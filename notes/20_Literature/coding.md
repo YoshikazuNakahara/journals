@@ -294,3 +294,137 @@ Lean のお作法に則り、堅牢な証明を書きます。
 | **等号証明** | `Prod.ext` を使う | 座標ペア（行, 列）を個別に比較するのに最適 |
 
 ---
+
+```lean
+import Mathlib.Tactic
+
+/-! ### 1. 属性の定義 -/
+inductive Color | Red | Green | Ivory | Yellow | Blue deriving DecidableEq, Fintype, Repr
+inductive Nation   | English | Spaniard | Ukrainian | Norwegian | Japanese deriving DecidableEq, Fintype, Repr
+inductive Drink | Coffee | Tea | Milk | OrangeJuice | Water deriving DecidableEq, Fintype, Repr
+inductive Smoke | OldGold | Kools | Chesterfields | LuckyStrike | Parliaments deriving DecidableEq, Fintype, Repr
+inductive Pet   | Dog | Snails | Fox | Horse | Zebra deriving DecidableEq, Fintype, Repr
+
+open Color Nation Drink Smoke Pet
+
+/-! ### 2. 世界の構造 -/
+structure ZebraWorld where
+  color : Color → Fin 5
+  nat   : Nation → Fin 5
+  drink : Drink → Fin 5
+  smoke : Smoke → Fin 5
+  pet   : Pet → Fin 5
+deriving DecidableEq
+
+/-! ### 3. スマートな制約述語 -/
+def sameHouse {α β : Type} (f : α → Fin 5) (g : β → Fin 5) (a : α) (b : β) : Prop := f a = g b
+def rightOf {α β : Type} (f : α → Fin 5) (g : β → Fin 5) (a : α) (b : β) : Prop := (f a : ℕ) = (g b : ℕ) + 1
+def neighborOf {α β : Type} (f : α → Fin 5) (g : β → Fin 5) (a : α) (b : β) : Prop :=
+  (f a : ℕ) + 1 = (g b : ℕ) ∨ (g b : ℕ) + 1 = (f a : ℕ)
+
+/-! ### 4. 制約の定義 -/
+def IsSolution (w : ZebraWorld) : Prop :=
+  sameHouse w.nat w.color English Red ∧
+  sameHouse w.nat w.pet Spaniard Dog ∧
+  sameHouse w.color w.drink Green Coffee ∧
+  sameHouse w.nat w.drink Ukrainian Tea ∧
+  rightOf w.color w.color Green Ivory ∧
+  sameHouse w.smoke w.pet OldGold Snails ∧
+  sameHouse w.color w.smoke Yellow Kools ∧
+  (w.drink Milk = 2) ∧
+  (w.nat Norwegian = 0) ∧
+  neighborOf w.smoke w.pet Chesterfields Fox ∧
+  neighborOf w.smoke w.pet Kools Horse ∧
+  sameHouse w.smoke w.drink LuckyStrike OrangeJuice ∧
+  sameHouse w.nat w.smoke Japanese Parliaments ∧
+  neighborOf w.nat w.color Norwegian Blue
+
+-- 計算可能にするためのインスタンス
+instance (w : ZebraWorld) : Decidable (IsSolution w) := by
+  dsimp [IsSolution, sameHouse, rightOf, neighborOf]
+  infer_instance
+
+/-! ### 5. 正解の構成 -/
+def solution : ZebraWorld := {
+  color := fun | Red => 2 | Green => 4 | Ivory => 3 | Yellow => 0 | Blue => 1
+  nat   := fun | English => 2 | Spaniard => 3 | Ukrainian => 1 | Norwegian => 0 | Japanese => 4
+  drink := fun | Coffee => 4 | Tea => 1 | Milk => 2 | OrangeJuice => 3 | Water => 0
+  smoke := fun | OldGold => 2 | Kools => 0 | Chesterfields => 1 | LuckyStrike => 3 | Parliaments => 4
+  pet   := fun | Dog => 3 | Snails => 2 | Fox => 0 | Horse => 1 | Zebra => 4
+}
+
+/-! ### 6. 検証 -/
+theorem zebra_is_solved : IsSolution solution := by
+  -- ここで decide を実行します。sorry がなければ True に簡約されます。
+  decide
+
+-- 1. 命題を独立した def として定義する（デバッグしやすくなります）
+def UniqueSolutionProp : Prop :=
+  ∀ (w : ZebraWorld), IsSolution w → w = solution
+
+-- これが通る＝少なくとも solution という解が存在する＝矛盾がない
+theorem consistency_check : ∃ w, IsSolution w := 
+  ⟨solution, zebra_is_solved⟩
+
+#eval solution.nat Japanese -- 4
+#eval solution.pet Zebra    -- 4
+```
+
+---
+
+## 1. モデリング：世界の構造化
+
+CSP の基本要素である「変数」「ドメイン」「制約」を Lean の型にマッピングします。
+
+* **ドメインの定義 (`inductive`)**:
+変数が取りうる値を列挙型で定義します。`DecidableEq`（比較可能）と `Fintype`（有限集合）を派生させることが、後の自動探索の鍵となります。
+* **変数のマッピング (`structure`)**:
+「家の中に属性がある」と考えるのではなく、**「属性から位置（`Fin n`）への関数」**としてモデル化するのが Lean 流です。これにより、境界条件（0番目や4番目の家など）の処理が型レベルで安全になります。
+
+---
+
+## 2. 制約の記述：述語による抽象化
+
+自然言語の制約を、Lean の `Prop`（命題）に変換します。
+
+* **高階述語の活用 (`abbrev`)**:
+`sameHouse`（同じ位置）, `neighborOf`（隣接）, `rightOf`（順序）といった汎用的な述語を先に定義します。
+* **`abbrev` の重要性**:
+`def` ではなく `abbrev` を使うことで、Lean の計算機（`decide`）が定義の境界を飛び越えて中身を直接評価できるようになり、計算効率が劇的に向上します。
+
+---
+
+## 3. 計算可能性の確保：`Decidable` インスタンス
+
+Lean は「すべての命題が計算可能である」とは見なしません。パズルを解かせるには、その制約が判定可能であることを示す必要があります。
+
+* **インスタンスの合成**:
+`instance : Decidable (IsSolution w)` を定義し、`dsimp` で制約を展開してから `infer_instance` で判定器を自動生成させます。
+* **`native_decide` の利用**:
+探索空間が膨大な場合、Lean の標準の計算機では力不足です。`native_decide` を使って C++ 並みの速度で全探索を実行させます。
+
+---
+
+## 4. 検証の三段階
+
+パズルが「解けた」と言えるためには、以下の3つを確認します。
+
+| 検証フェーズ | 数学的な意味 | Lean での手法 |
+| --- | --- | --- |
+| **存在証明 (Consistency)** | 少なくとも1つは解がある | 具体的な `solution` を作り `decide` する |
+| **一意性証明 (Uniqueness)** | 解がそれ以外に存在しない | `∀ w, IsSolution w → w = solution` を証明 |
+| **独立性証明 (Independence)** | 条件に無駄がない | 特定の条件を抜いて解が複数出ることを確認 |
+
+---
+
+## 5. Lean 4 CSP 攻略チェックリスト
+
+新しいパズルや問題に取り組む際は、この順序で設計します。
+
+1. [ ] **Types**: 属性はすべて `inductive` で定義したか？
+2. [ ] **Bijective**: 各属性の割り当てが 1 対 1 であることを考慮したか？
+3. [ ] **Predicates**: 問題文を `same`, `neighbor` 等の共通部品で書いたか？
+4. [ ] **Deriving**: `DecidableEq`, `Fintype` は付与したか？
+5. [ ] **Check**: `native_decide` が通る「閉じられた命題」になっているか？
+
+---
